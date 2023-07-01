@@ -91,7 +91,16 @@ myrng <- function(seed) {
 }
 
 ##  Generate Table 9: for F=4 and F=5 ==========================================
-nf <- 4
+##
+##  Run R-ALS and R-INT2 several times and report the average number of iterations and times. 
+##  Set nf to 4 or 5 for correct factor estimation and over-factoring respectively
+##  This could be done also with microbenchmark...
+##
+##  Compare the resulting loadings matrices e.g. from the last repetition 
+##  (with a given tolerance)
+##  
+
+nf <- 5
 nrep <- 10
 iter_inc <- rep(NA, nrep)
 ainc <- rep(NA, nrep)
@@ -102,7 +111,7 @@ time_rint2 <- rep(NA, nrep)
 time_inc <- NA
 for(i in 1:nrep) {
 
-    seed <- myrng()
+    ##  seed <- myrng()
     parr  <- R_als(dorrit, ncomp=nf, type="als", start="svd", conv=1e-8, maxit=5000, alpha=0.75)
     parr2 <- R_als(dorrit, ncomp=nf, type="int2", start="svd", initconv=1e-2, conv=1e-8, maxit=5000, alpha=0.75)
 
@@ -113,7 +122,8 @@ for(i in 1:nrep) {
     iter_inc[i]  <- round(100*(parr$iter-parr2$iter)/parr$iter, 2)
     ainc[i] <- inc <- round(100*(parr$cputime-parr2$cputime)/parr$cputime, 2)
 
-    cat("\ni=", i, seed, parr$cputime, parr2$cputime, inc, fill=TRUE)
+##    cat("\ni=", i, seed, parr$cputime, parr2$cputime, inc, fill=TRUE)
+    cat("\ni=", i, parr$cputime, parr2$cputime, inc, fill=TRUE)
 }
 
 cat("\nITER: R-ALS, R-INT2, Improvement (percent)", mean(iter_rals), mean(iter_rint2), mean(iter_inc), "\n")

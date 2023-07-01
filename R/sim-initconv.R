@@ -8,19 +8,15 @@ if(FALSE) {
     source(file.path(home, "functions.R"))
     source(file.path(home, "sim-initconv.R"))
 
-    set.seed(12345)
-    sim_initall(I=50, J=50, K=50, nsim=100, nf=3, conver=1e-8)
-
-    set.seed(567890)
-    sim_initall(I=50, J=50, K=50, nsim=100, nf=5, conver=1e-8)
+    sim_initall(I=50, J=100, K=10, nsim=1, nf=3, conver=1e-8)
 
     simx=sim_initconv(I=20, J=20, K=20, nsim=10, nf=3, nfe=3, conver=1e-6, noise=0.15, noise1=0.10, cong=0.5)
 }
 
 ## Simulate for a grid of values for noise and CONG
-sim_initall <- function(I=50, J=50, K=50, nsim=100, nf=3, nfe=nf, conver=1e-8, trace=FALSE){
+sim_initall <- function(I=50, J=100, K=10, nsim=100, nf=3, nfe=nf, conver=1e-8, trace=FALSE){
 
-    cong <- seq(0.2, 0.7, 0.1)
+    cong <- seq(0.3, 0.7, 0.1)
     noise <- matrix(c(0.15, 0.10, 0.15, 0.15, 0.15, 0.20,
                       0.20, 0.10, 0.20, 0.15, 0.20, 0.20,
                       0.25, 0.10, 0.25, 0.15, 0.25, 0.20), ncol=2, byrow=TRUE)
@@ -85,7 +81,7 @@ tic()
             mse[i, j] <- mse2(data$X, parr2, iout=data$iout)
             mxB[i, j] <- mysubspace(data$B, parr2$B/norm(parr2$B, type="F"))
             mxC[i, j] <- mysubspace(data$C, parr2$C/norm(parr2$C, type="F"))
-            time[i, j] <- parr2$time
+            time[i, j] <- parr2$cputime
             iter[i, j] <- parr2$robiter * parr2$aveiter + parr2$iter
             fit[i, j, 1] <- parr2$fit
             fit[i, j, 2] <- parr2$fp

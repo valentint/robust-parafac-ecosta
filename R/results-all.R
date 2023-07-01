@@ -172,7 +172,7 @@ getFit <- function(simx_all, fit=c("fit", "fp", "ss"), cong) {
 }
 
 ##================================================================
-home <- "C:/users/valen/onedrive/current/conferences-2022/EcoSta/Revision-1/R"
+home <- "C:/users/valen/onedrive/myrepo/robust-parafac-ecosta/R"
 
 nf0   <- 3          # 3 or 5
 nfe0  <- 3          # 3 or 4 or 6

@@ -591,8 +591,8 @@ CPf <- function(X_, r, ort1=1, ort2=1, ort3=1, start=0, conv=1e-6, maxit=10000, 
         A <- qx$A; B <- qx$B; C <- qx$C
     }
 
-    ret <- list(A=A, B=B, C=C, f=f, fp=fp, ss=ssx, iter=iter, iter_opt=NULL, cputime=cputime[1],
-        tripcos=tripcos, ftiter=ftiter, single_iter=single_iter[1:iter],
+    ret <- list(fit=f, fp=fp, ss=ssx, A=A, B=B, C=C, iter=iter, cputime=cputime[1],
+        tripcos=tripcos, mintripcos=mintripcos, ftiter=ftiter, single_iter=single_iter[1:iter],
         robust=FALSE, coda.transform="none")
     class(ret) <- "parafac"
     ret
@@ -631,22 +631,6 @@ CP_ALS <- function(X_, r, ort1=1, ort2=1, ort3=1, start=0, conv=1e-6, maxit=1000
 
 atld <- function(X, r, conv=1e-06, start=1, maxit=5000, mnor=FALSE)
 {
-    ## Include following packages:
-    ##
-    ##  - Matrix
-    ##      ??
-    ##  - MASS
-    ##      ginv()      - replaced by pracma::pinv()
-    ##
-    ##  - Threeway:
-    ##      supermat()  - replace by rrcov3way::unfold()
-    ##      permnew()   - replace by rrcov3way::permute()
-    ##      orth        - replace by pracma::orth()
-    ##      phi()       - replace by rrcov3way::congruence()
-    ##
-    ##  - multiway:
-    ##      krprod()    - replaced by rrcov3way::krp()
-
     # Input
     # X is a threeway array (n x m x p)
     # r = number of factors
@@ -667,7 +651,7 @@ atld <- function(X, r, conv=1e-06, start=1, maxit=5000, mnor=FALSE)
     m <- di[2]
     p <- di[3]
     dn <- dimnames(X)
-    Xk <- ThreeWay::supermat(X)$Xa
+    Xk <- rrcov3way::unfold(X)
     Xfit <- array(0,c(n,m,p))
     single_iter <- matrix(0, maxit)     # output
     ftiter <- matrix(0, maxit/10, 2)
@@ -684,47 +668,47 @@ atld <- function(X, r, conv=1e-06, start=1, maxit=5000, mnor=FALSE)
                 A = AUT$vectors[, 1:r]
             }
             else {
-                A = ThreeWay::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
+                A = pracma::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
                 A = A[1:n, ]
             }
-            Z = ThreeWay::permnew(Xk, n, m, p)
+            Z = rrcov3way::permute(Xk, n, m, p)
             if (m >= r) {
                 AUT = eigen(Z %*% t(Z))
                 B = AUT$vectors[, 1:r]
             }
             else {
-                B = ThreeWay::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
+                B = pracma::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
                 B = B[1:m, ]
             }
-            Z = ThreeWay::permnew(Z, m, p, n)
+            Z = rrcov3way::permute(Z, m, p, n)
             if (p >= r) {
                 AUT = eigen(Z %*% t(Z))
                 C = AUT$vectors[, 1:r]
             }
             else {
-                C = ThreeWay::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
+                C = pracma::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
                 C = C[1:p, ]
             }
         }else if (start == 1) {
             if (n >= r) {
-                A = ThreeWay::orth(matrix(runif(n * r, 0, 1), nrow = n) - 0.5)
+                A = pracma::orth(matrix(runif(n * r, 0, 1), nrow = n) - 0.5)
             }
             else {
-                A = ThreeWay::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
+                A = pracma::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
                 A = A[1:n, ]
             }
             if (m >= r) {
-                B = ThreeWay::orth(matrix(runif(m * r, 0, 1), nrow = m) - 0.5)
+                B = pracma::orth(matrix(runif(m * r, 0, 1), nrow = m) - 0.5)
             }
             else {
-                B = ThreeWay::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
+                B = pracma::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
                 B = B[1:m, ]
             }
             if (p >= r) {
-                C = ThreeWay::orth(matrix(runif(p* r, 0, 1), nrow = p) - 0.5)
+                C = pracma::orth(matrix(runif(p* r, 0, 1), nrow = p) - 0.5)
             }
             else {
-                C = ThreeWay::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
+                C = pracma::orth(matrix(runif(r * r, 0, 1), nrow = r) - 0.5)
                 C = C[1:p, ]
             }
         }
@@ -751,12 +735,12 @@ atld <- function(X, r, conv=1e-06, start=1, maxit=5000, mnor=FALSE)
             iter <- iter + 1
             LF <- f
 
-            Z1 <- ThreeWay::permnew(Xk, n, m, p)
+            Z1 <- rrcov3way::permute(Xk, n, m, p)
             A <- A %*% diag(1/sqrt(diag(t(A) %*% A))) %*% diag(sqrt(diag(t(C) %*% C)))
             PA <- do_inv(A, epsilon)
 
             B <- Z1 %*% rrcov3way::krp(t(PA), t(PC))
-            Z1 <- ThreeWay::permnew(Z1, m, p, n)
+            Z1 <- rrcov3way::permute(Z1, m, p, n)
             B <- B %*% diag(1/sqrt(diag(t(B) %*% B))) %*% diag(sqrt(diag(t(A) %*% A)))
             PB <- do_inv(B, epsilon)
 
@@ -791,17 +775,13 @@ atld <- function(X, r, conv=1e-06, start=1, maxit=5000, mnor=FALSE)
         A <- qx$A; B <- qx$B; C <- qx$C
     }
 
-    pfac <- list(A=A, B=B, C=C, f=f, fp=fp, iter=iter, cputime=cputime[1],
-        tripcos=tripcos, single_iter=single_iter[1:iter],
-        robust=FALSE, coda.transform="none")
-    class(pfac) <- "parafac"
-    pfac
+    pfac <- list(fit=f, fp=fp, ss=ssx, A=A, B=B, C=C, iter=iter, cputime=cputime[1],
+        tripcos=tripcos, mintripcos=mintripcos, single_iter=single_iter[1:iter])
+     pfac
 }   # ATLD
 
 int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort3=1, maxit=5000, mnor=FALSE, trace=FALSE)
 {
-    # INT-2
-    # Include following packages: Matrix, Threeway, MASS, multiway
     # Input
     # X = Threeway array (n x m x p)
     # r = Number of factors
@@ -824,15 +804,14 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
     # out$Xfit = Reconstructed array, flattened with respect to the first mode,  dim= (n x JK)
     # out$single_iter = Relative fit for each iteration
 
-
     #### ASSIGN INITIAL VALUES
     di <- dim(X)
     n <- di[1]
     m <- di[2]
     p <- di[3]
     dn <- dimnames(X)
-    Xk <- ThreeWay:::supermat(X)$Xa
-    Xfit <- array(0,c(n,m,p))
+    Xk <- rrcov3way::unfold(X)
+
     single_iter <- matrix(0,maxit)# output
     ftiter <- matrix(0, maxit/10, 2)
     mintripcos <- 0
@@ -854,7 +833,7 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
                              0.5)
                 A = A[1:n, ]
             }
-            Z = ThreeWay::permnew(Xk, n, m, p)
+            Z = rrcov3way::permute(Xk, n, m, p)
             if (m >= r) {
                 AUT = eigen(Z %*% t(Z))
                 B = AUT$vectors[, 1:r]
@@ -864,7 +843,7 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
                              0.5)
                 B = B[1:m, ]
             }
-            Z = ThreeWay::permnew(Z, m, p, n)
+            Z = rrcov3way::permute(Z, m, p, n)
             if (p >= r) {
                 AUT = eigen(Z %*% t(Z))
                 C = AUT$vectors[, 1:r]
@@ -925,7 +904,7 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
             if(trace)
                 cat("\n iter=", iter, "estimating A...\n")
 
-            Z1 <-  ThreeWay::permnew(Xk, n, m, p)
+            Z1 <-  rrcov3way::permute(Xk, n, m, p)
             A <- A %*% diag(1/sqrt(diag(t(A) %*% A))) %*% diag(sqrt(diag(t(C) %*% C)))
             PA <- do_inv(A, epsilon)
             B<-Z1 %*% krp(t(PA), t(PC))
@@ -933,7 +912,7 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
             if(trace)
                 cat("\n iter=", iter, "estimating B...\n")
 
-            Z1 <- ThreeWay::permnew(Z1, m, p, n)
+            Z1 <- rrcov3way::permute(Z1, m, p, n)
             B <- B %*% diag(1/sqrt(diag(t(B) %*% B))) %*% diag(sqrt(diag(t(A) %*% A)))
             PB <- do_inv(B, epsilon)
 
@@ -956,7 +935,7 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
                 cat("\n iter=", iter, "f=", f, abs((f - LF)/f), "\n")
 
         }
-        iter->iter_opt
+        iter_opt <- iter
 
         ## REFINING SOLUTION
         ## INITIALIZE  ALS
@@ -964,9 +943,9 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
         for(ii in 1:r) {
             H[ii, (ii - 1) * r + ii] <- 1
         }
-        H1 <- ThreeWay::permnew(H, r, r, r)
-        H1 <- ThreeWay::permnew(B %*% H1, m, r, r)
-        H1 <- ThreeWay::permnew(C %*% H1, p, r, m)
+        H1 <- rrcov3way::permute(H, r, r, r)
+        H1 <- rrcov3way::permute(B %*% H1, m, r, r)
+        H1 <- rrcov3way::permute(C %*% H1, p, r, m)
 
         BB <- t(B) %*% B
         CC <- t(C) %*% C
@@ -975,9 +954,9 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
         while((LF - f > conv * f | iter <= iter_opt+1) & f > conv^2 & iter < maxit) {
             iter = iter + 1
             LF = f
-            Z1 = ThreeWay::permnew(Xk, n, m, p)
-            Z1 = ThreeWay::permnew(t(B) %*% Z1, r, p, n)
-            Z1 = ThreeWay::permnew(t(C) %*% Z1, r, n, r)
+            Z1 = rrcov3way::permute(Xk, n, m, p)
+            Z1 = rrcov3way::permute(t(B) %*% Z1, r, p, n)
+            Z1 = rrcov3way::permute(t(C) %*% Z1, r, n, r)
             XF = Z1 %*% t(H)
             if (ort1 == 1) {
                 FF = BB * CC
@@ -995,10 +974,10 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
                     apply(XF, 2, mean) %*% solve(FF)
             }
             AA = t(A) %*% A
-            Z = ThreeWay::permnew(Xk, n, m, p)
-            Z1 = ThreeWay::permnew(Z, m, p, n)
-            Z1 = ThreeWay::permnew(t(C) %*% Z1, r, n, m)
-            Z1 = ThreeWay::permnew(t(A) %*% Z1, r, m, r)
+            Z = rrcov3way::permute(Xk, n, m, p)
+            Z1 = rrcov3way::permute(Z, m, p, n)
+            Z1 = rrcov3way::permute(t(C) %*% Z1, r, n, m)
+            Z1 = rrcov3way::permute(t(A) %*% Z1, r, m, r)
             XF = Z1 %*% t(H)
             if (ort2 == 1) {
                 FF = AA * CC
@@ -1016,10 +995,10 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
                     apply(XF, 2, mean) %*% solve(FF)
             }
             BB = t(B) %*% B
-            Z = ThreeWay::permnew(Z, m, p, n)
-            Z1 = ThreeWay::permnew(Z, p, n, m)
-            Z1 = ThreeWay::permnew(t(A) %*% Z1, r, m, p)
-            Z1 = ThreeWay::permnew(t(B) %*% Z1, r, p, r)
+            Z = rrcov3way::permute(Z, m, p, n)
+            Z1 = rrcov3way::permute(Z, p, n, m)
+            Z1 = rrcov3way::permute(t(A) %*% Z1, r, m, p)
+            Z1 = rrcov3way::permute(t(B) %*% Z1, r, p, r)
             XF = Z1 %*% t(H)
             if (ort3 == 1) {
                 FF = AA * BB
@@ -1038,22 +1017,21 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
             }
             CC = t(C) %*% C
             if (ort3 == 1) {
-                f = ssx - ThreeWay::tr(CC %*% FF)
+                f = ssx - rrcov3way::mtrace(CC %*% FF)
             }
             else {
-                H1 = ThreeWay::permnew(H, r, r, r)
-                H1 = ThreeWay::permnew(B %*% H1, m, r, r)
-                H1 = ThreeWay::permnew(C %*% H1, p, r, m)
+                H1 = rrcov3way::permute(H, r, r, r)
+                H1 = rrcov3way::permute(B %*% H1, m, r, r)
+                H1 = rrcov3way::permute(C %*% H1, p, r, m)
                 f = sum((Xk - A %*% H1)^2)
             }
 
             ##  Record Relative Fit
-            abs((LF - f)/f)->Tot
-            single_iter[iter]<-Tot
+            single_iter[iter] <- abs((LF - f)/f)
 
             ##  TRIPLE COSINE
             if(iter%%10 == 0) {
-                tripcos = min(ThreeWay::phi(A, A) * ThreeWay::phi(B, B) * ThreeWay::phi(C, C))
+                tripcos = min(rrcov3way::congruence(A, A) * rrcov3way::congruence(B, B) * rrcov3way::congruence(C, C))
                 if (iter == 10)
                     mintripcos = tripcos
                 if (tripcos < mintripcos)
@@ -1074,7 +1052,7 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
     fp = 100 - 100 * f/ss
 
     ## Degeneracy problem if |tripcos|>.5
-    tripcos = min(ThreeWay::phi(A, A) * ThreeWay::phi(B, B) * ThreeWay::phi(C, C))
+    tripcos = min(rrcov3way::congruence(A, A) * rrcov3way::congruence(B, B) * rrcov3way::congruence(C, C))
     names(tripcos) = c("Minimal triple cosine")
     if (iter < 10)
         mintripcos = tripcos
@@ -1085,8 +1063,8 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
         A <- qx$A; B <- qx$B; C <- qx$C
     }
 
-    pfac <- list(A = A, B = B, C = C, f=f, fp = fp, ss=ssx, iter = iter,
-        iter_opt=iter_opt, cputime=cputime[1], tripcos=tripcos, ftiter=ftiter,
+    pfac <- list(fit=f, fp = fp, ss=ssx, A = A, B = B, C = C, iter = iter,
+        iter_opt=iter_opt, cputime=cputime[1], tripcos=tripcos, mintripcos=mintripcos, ftiter=ftiter,
         single_iter=single_iter[1:iter], robust=FALSE, coda.transform="none")
 
     class(pfac) <- "parafac"
@@ -1094,7 +1072,7 @@ int2 <- function (X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort
     pfac
 }   # int2
 
-cp_int2 <- function(X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort3=1, maxit=5000, mnor=FALSE, trace=FALSE) {
+cp_int2_test <- function(X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, ort3=1, maxit=5000, mnor=FALSE, trace=FALSE) {
 
     cpu <- system.time({
         atld <- atld(X, r=r, start=start, conv=initconv, maxit=maxit, mnor=FALSE)
@@ -1110,7 +1088,7 @@ cp_int2 <- function(X, r, initconv=1e-01, conv=1e-06, start=0, ort1=1, ort2=1, o
 
 ##===================================================================================
 
-R_als <- function (X, ncomp=2, type=c("als", "int2"), initconv=1e-1,
+R_als <- function (X, ncomp=2, type=c("als", "int2"), initconv=1e-2,
     const="none", conv=1e-6, start="svd", maxit=10000,
     ncomp.rpca=0, alpha=0.75, robiter=100, crit=0.975,
     trace=FALSE)
@@ -1253,10 +1231,11 @@ cputime = system.time({
     dimnames(Xfit) <- dn
     names(rd) <- names(sd$sd) <- names(flag) <- dn[[1]]
 
-    res <- list(fit=fit, fp=fp, ss=ssx, A=Arew, B=Brew, C=Crew, Xhat=Xfit, const=ret$const,
-                flag=flag, Hset=Hset, iter=ret$iter, aveiter=aveiter, ftiter=ret$ftiter,
-                alpha=alpha, rd=rd, cutoff.rd=cutoff.rd, sd=sd$sd, cutoff.sd=sd$cutoff.sd,
-                pcaobj=outrobpca, robiter=iter, time=cputime[1], robust=TRUE, coda.transform="none")
+    res <- list(fit=fit, fp=fp, ss=ssx, A=Arew, B=Brew, C=Crew, iter=ret$iter, const=ret$const,
+                ftiter=ret$ftiter, aveiter=aveiter,
+                flag=flag, Hset=Hset,
+                Xhat=Xfit, rd=rd, cutoff.rd=cutoff.rd, sd=sd$sd, cutoff.sd=sd$cutoff.sd,
+                alpha=alpha, pcaobj=outrobpca, robiter=iter, cputime=cputime[1], robust=TRUE, coda.transform="none")
     class(res) <- "parafac"
     res
 }
